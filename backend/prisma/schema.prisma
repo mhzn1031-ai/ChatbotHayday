@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Subscription
+  subscription   Subscription?
+  subscriptionId String?
+
+  // Relations
+  bots      Bot[]
+  documents Document[]
+  usage     Usage[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  plan      Plan     @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  stripeId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Limits
+  botLimit      Int @default(1)
+  messageLimit  Int @default(100)
+  documentLimit Int @default(5)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Bot {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Configuration
+  config      BotConfig?
+  
+  // Training data
+  documents   Document[]
+  websites    Website[]
+  
+  // Analytics
+  conversations Conversation[]
+  usage         Usage[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bots")
+}
+
+model BotConfig {
+  id     String @id @default(cuid())
+  botId  String @unique
+  
+  // Appearance
+  name          String  @default("AI Assistant")
+  welcomeMessage String @default("Hello! How can I help you today?")
+  primaryColor   String @default("#3B82F6")
+  fontFamily     String @default("Inter")
+  logoUrl        String?
+  
+  // Behavior
+  tone          String @default("friendly")
+  language      String @default("en")
+  temperature   Float  @default(0.7)
+  maxTokens     Int    @default(500)
+  
+  // Embedding settings
+  embeddingProvider String @default("openai")
+  model            String @default("text-embedding-ada-002")
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("bot_configs")
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  userId    String
+  botId     String?
+  createdAt DateTime @default(now())
+  
+  // Processing status
+  status    ProcessingStatus @default(PENDING)
+  error     String?
+  
+  // Storage
+  s3Key     String?
+  localPath String?
+  
+  // MongoDB reference for chunks
+  mongoId   String?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bot  Bot?  @relation(fields: [botId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+model Website {
+  id        String   @id @default(cuid())
+  url       String
+  botId     String
+  createdAt DateTime @default(now())
+  
+  // Scraping status
+  status    ProcessingStatus @default(PENDING)
+  error     String?
+  lastScraped DateTime?
+  
+  // MongoDB reference for content
+  mongoId   String?
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("websites")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  botId     String
+  sessionId String
+  createdAt DateTime @default(now())
+  
+  messages  Message[]
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime @default(now())
+  
+  // Metadata
+  tokens         Int?
+  responseTime   Int? // milliseconds
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Usage {
+  id        String   @id @default(cuid())
+  userId    String
+  botId     String?
+  date      DateTime @default(now())
+  
+  // Metrics
+  messages  Int @default(0)
+  tokens    Int @default(0)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bot  Bot? @relation(fields: [botId], references: [id], onDelete: SetNull)
+
+  @@map("usage")
+  @@unique([userId, botId, date])
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  INCOMPLETE
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}

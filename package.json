@@ -1,0 +1,42 @@
+{
+  "name": "ai-chatbot-saas",
+  "version": "1.0.0",
+  "description": "SaaS platform for creating custom AI chatbots",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "ai-service",
+    "widget",
+    "shared"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:backend && npm run install:frontend && npm run install:ai-service && npm run install:widget",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:ai-service": "cd ai-service && npm install",
+    "install:widget": "cd widget && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:ai-service\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:ai-service": "cd ai-service && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:ai-service && npm run build:widget",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:ai-service": "cd ai-service && npm run build",
+    "build:widget": "cd widget && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "db:setup": "cd backend && npm run db:migrate && npm run db:seed",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
